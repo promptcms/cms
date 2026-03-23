@@ -1,0 +1,16 @@
+{
+    "slug": "business",
+    "name": "Business",
+    "version": "1.0.0",
+    "description": "Professionelles, vertrauenswürdiges Design mit klaren Linien. Ideal für Beratung, Agenturen, B2B, Kanzleien.",
+    "preview_colors": [
+        "#2563eb",
+        "#1e40af",
+        "#f8fafc",
+        "#0f172a"
+    ],
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap",
+    "body_class": "min-h-screen flex flex-col antialiased",
+    "body_style": "font-family: var(--font-body); background: var(--color-bg); color: var(--color-text);",
+    "prompt": "Gestalte die Website professionell und vertrauenswürdig. Klare Linien, Blautöne, strukturierte Layouts mit Fakten und Zahlen. Denke an McKinsey, Stripe, oder hochwertige B2B-Websites."
+}

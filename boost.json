@@ -1,0 +1,20 @@
+{
+    "agents": [
+        "claude_code"
+    ],
+    "guidelines": true,
+    "herd_mcp": false,
+    "mcp": true,
+    "nightwatch_mcp": false,
+    "packages": [
+        "filament/filament",
+        "laravel/ai"
+    ],
+    "sail": false,
+    "skills": [
+        "mcp-development",
+        "pest-testing",
+        "tailwindcss-development",
+        "ai-sdk-development"
+    ]
+}

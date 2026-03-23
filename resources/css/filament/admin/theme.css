@@ -1,0 +1,9 @@
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/* Reduce gap between Filament sidebar and main content */
+.fi-main {
+    @apply px-1 md:px-2 lg:px-2;
+}

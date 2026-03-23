@@ -1,0 +1,16 @@
+{
+    "slug": "creative",
+    "name": "Kreativ",
+    "version": "1.0.0",
+    "description": "Ausdrucksstarkes Design mit kräftigen Farben und dynamischen Layouts. Ideal für Kreativagenturen, Portfolios, Startups.",
+    "preview_colors": [
+        "#8b5cf6",
+        "#ec4899",
+        "#faf5ff",
+        "#1e1b4b"
+    ],
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap",
+    "body_class": "min-h-screen flex flex-col antialiased",
+    "body_style": "font-family: var(--font-body); background: var(--color-bg); color: var(--color-text);",
+    "prompt": "Gestalte die Website kreativ und ausdrucksstark. Kräftige Farben (Violett, Pink, Gradients), große mutige Headlines, dynamische Layouts, viel visuelle Energie. Denke an Figma, Vercel, oder Award-winning Agency-Sites."
+}

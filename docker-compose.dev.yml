@@ -1,0 +1,28 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: promptcms-dev
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      SERVER_NAME: "localhost"
+      APP_ENV: local
+      APP_DEBUG: "true"
+      APP_URL: "https://localhost"
+      DB_CONNECTION: sqlite
+      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
+    volumes:
+      - db-data:/app/database
+      - storage-data:/app/storage/app
+      - caddy-data:/data
+      - caddy-config:/config
+
+volumes:
+  db-data:
+  storage-data:
+  caddy-data:
+  caddy-config:

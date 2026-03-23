@@ -1,0 +1,30 @@
+{
+	# Global options
+	frankenphp
+	order php_server before file_server
+
+	# Use environment variable for domain, fallback to localhost
+	# Set SERVER_NAME env var to your domain for automatic SSL
+}
+
+{$SERVER_NAME:localhost} {
+	root * /app/public
+
+	# Encode responses
+	encode zstd gzip
+
+	# Serve PHP via FrankenPHP
+	php_server
+
+	# Serve static files with cache headers
+	@static path *.css *.js *.ico *.gif *.jpg *.jpeg *.png *.svg *.webp *.woff *.woff2
+	header @static Cache-Control "public, max-age=31536000, immutable"
+
+	# Storage/media files
+	@storage path /storage/*
+	file_server @storage
+
+	# Build assets (Vite)
+	@build path /build/*
+	header @build Cache-Control "public, max-age=31536000, immutable"
+}

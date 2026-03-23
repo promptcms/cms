@@ -1,0 +1,16 @@
+{
+    "slug": "elegant",
+    "name": "Elegant",
+    "version": "1.0.0",
+    "description": "Zeitloses, gehobenes Design mit Serif-Fonts und warmen Farben. Ideal für Hochzeitsplaner, Fotografen, Luxus-Dienstleister.",
+    "preview_colors": [
+        "#b76e79",
+        "#d4a69e",
+        "#fdf8f4",
+        "#2f1f24"
+    ],
+    "google_fonts_url": "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap",
+    "body_class": "min-h-screen flex flex-col antialiased",
+    "body_style": "font-family: var(--font-body); background: var(--color-bg); color: var(--color-text);",
+    "prompt": "Gestalte die Website elegant und zeitlos. Verwende warme, rosé-goldene Töne, große Serif-Headlines, viel Weißraum und hochwertige Bildsprache. Denke an Hochzeitsportfolios, Boutique-Hotels, Luxusmarken."
+}
