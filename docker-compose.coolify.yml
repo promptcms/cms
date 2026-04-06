@@ -1,9 +1,6 @@
 services:
   app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args: {}
+    image: ghcr.io/promptcms/cms:latest
     container_name: promptcms
     restart: unless-stopped
     ports:
