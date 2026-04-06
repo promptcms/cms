@@ -1,6 +1,8 @@
 services:
   app:
-    image: "${COOLIFY_IMAGE:-ghcr.io/promptcms/cms:latest}"
+    build:
+      context: .
+      dockerfile: Dockerfile
     container_name: promptcms
     restart: unless-stopped
     ports:
@@ -31,26 +33,6 @@ services:
       retries: 3
       start_period: 30s
 
-  queue:
-    image: "${COOLIFY_IMAGE:-ghcr.io/promptcms/cms:latest}"
-    container_name: promptcms-queue
-    restart: unless-stopped
-    entrypoint: ~
-    command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --timeout=120
-    environment:
-      APP_ENV: "${APP_ENV:-production}"
-      APP_KEY: "${APP_KEY}"
-      DB_CONNECTION: "${DB_CONNECTION:-sqlite}"
-      OPENAI_API_KEY: "${OPENAI_API_KEY:-}"
-      QUEUE_CONNECTION: "${QUEUE_CONNECTION:-database}"
-      CACHE_STORE: "${CACHE_STORE:-database}"
-    volumes:
-      - db-data:/app/database
-      - storage-data:/app/storage/app
-      - plugins-data:/app/plugins
-    depends_on:
-      app:
-        condition: service_healthy
 
 volumes:
   db-data:
