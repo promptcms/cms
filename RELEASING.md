@@ -24,7 +24,7 @@ The [release workflow](.github/workflows/release.yml) then:
 5. Generates release notes from the commit log since the previous tag
 6. Creates a GitHub release with the ZIP attached
 
-You'll find the published release at `https://github.com/stack74/ccms/releases`.
+You'll find the published release at `https://github.com/promptcms/cms/releases`.
 
 ## Versioning
 
