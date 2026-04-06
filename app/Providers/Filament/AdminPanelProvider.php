@@ -54,6 +54,10 @@ class AdminPanelProvider extends PanelProvider
             ->discoverWidgets(in: app_path('Filament/Widgets'), for: 'App\Filament\Widgets')
             ->widgets([])
             ->renderHook(
+                PanelsRenderHook::BODY_START,
+                fn () => view('filament.banners.update-available'),
+            )
+            ->renderHook(
                 PanelsRenderHook::USER_MENU_BEFORE,
                 fn () => new HtmlString('
                     <a href="/" target="_blank"
