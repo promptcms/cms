@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    |
+    | The PromptCMS release version. This value is rewritten automatically by
+    | the GitHub release workflow when building a tagged release; for local
+    | development it stays as "0.1.0-dev". Surfaced in snapshot exports and
+    | the admin UI.
+    |
+    */
+
+    'version' => '0.1.0-dev',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

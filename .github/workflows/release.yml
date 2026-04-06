@@ -1,0 +1,140 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+permissions:
+  contents: write
+
+jobs:
+  build-and-release:
+    name: Build ZIP and create release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION="${GITHUB_REF_NAME#v}"
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "tag=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+          echo "Building version: ${VERSION}"
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_sqlite, gd, fileinfo, zip, openssl
+          coverage: none
+          tools: composer:v2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Stamp version into config/app.php
+        run: |
+          php -r "
+            \$file = 'config/app.php';
+            \$contents = file_get_contents(\$file);
+            \$updated = preg_replace(
+              \"/'version'\s*=>\s*'[^']*'/\",
+              \"'version' => '${{ steps.version.outputs.version }}'\",
+              \$contents,
+              1
+            );
+            if (\$updated === null || \$updated === \$contents) {
+              fwrite(STDERR, \"Failed to stamp version into config/app.php\n\");
+              exit(1);
+            }
+            file_put_contents(\$file, \$updated);
+            echo \"Stamped version: ${{ steps.version.outputs.version }}\n\";
+          "
+
+      - name: Install Composer dependencies (production)
+        run: composer install --no-dev --optimize-autoloader --no-progress --no-interaction
+
+      - name: Install Node dependencies
+        run: npm ci
+
+      - name: Build frontend assets
+        run: npm run build
+
+      - name: Prepare release directory
+        run: |
+          RELEASE_DIR="promptcms-${{ steps.version.outputs.version }}"
+          mkdir -p "../${RELEASE_DIR}"
+          rsync -a \
+            --exclude='.git' \
+            --exclude='.github' \
+            --exclude='node_modules' \
+            --exclude='tests' \
+            --exclude='.env' \
+            --exclude='.env.local' \
+            --exclude='.phpunit.cache' \
+            --exclude='.phpunit.result.cache' \
+            --exclude='database/database.sqlite' \
+            --exclude='storage/app/private/*' \
+            --exclude='storage/app/public/*' \
+            --exclude='storage/logs/*' \
+            --exclude='storage/framework/cache/data/*' \
+            --exclude='storage/framework/sessions/*' \
+            --exclude='storage/framework/views/*' \
+            --exclude='storage/framework/testing/*' \
+            --exclude='public/storage' \
+            --exclude='public/build/.vite' \
+            ./ "../${RELEASE_DIR}/"
+          # Keep .gitkeep files so directories survive in the ZIP
+          find "../${RELEASE_DIR}/storage" -type d -empty -exec touch {}/.gitkeep \;
+          mv "../${RELEASE_DIR}" "./${RELEASE_DIR}"
+
+      - name: Create ZIP archive
+        run: |
+          ZIP_NAME="promptcms-${{ steps.version.outputs.version }}.zip"
+          zip -r "${ZIP_NAME}" "promptcms-${{ steps.version.outputs.version }}" -q
+          ls -lh "${ZIP_NAME}"
+          echo "ZIP_NAME=${ZIP_NAME}" >> "$GITHUB_ENV"
+
+      - name: Generate release notes
+        id: notes
+        run: |
+          # Use the previous tag for the changelog range, or fall back to first commit
+          PREV_TAG=$(git describe --tags --abbrev=0 "${{ steps.version.outputs.tag }}^" 2>/dev/null || echo "")
+          if [ -n "$PREV_TAG" ]; then
+            RANGE="${PREV_TAG}..${{ steps.version.outputs.tag }}"
+            echo "Comparing against: ${PREV_TAG}"
+          else
+            RANGE="${{ steps.version.outputs.tag }}"
+            echo "First release — using all commits"
+          fi
+
+          {
+            echo "notes<<EOF"
+            echo "## PromptCMS ${{ steps.version.outputs.tag }}"
+            echo ""
+            echo "### Changes"
+            git log --pretty=format:'- %s (%h)' "${RANGE}" 2>/dev/null || git log --pretty=format:'- %s (%h)'
+            echo ""
+            echo ""
+            echo "### Installation"
+            echo ""
+            echo "Download \`${ZIP_NAME}\`, extract on your server, point your document root to \`public/\`, then open the site in a browser to run the installer. See the README for full instructions."
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Create GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.tag }}
+          name: PromptCMS ${{ steps.version.outputs.tag }}
+          body: ${{ steps.notes.outputs.notes }}
+          files: ${{ env.ZIP_NAME }}
+          draft: false
+          prerelease: ${{ contains(steps.version.outputs.version, '-') }}
