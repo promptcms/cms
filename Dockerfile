@@ -38,18 +38,13 @@ FROM dunglas/frankenphp:php8.4-alpine
 
 # Install PHP extensions needed by Laravel + media library
 RUN install-php-extensions \
-    bcmath \
     gd \
     intl \
     opcache \
     pdo_sqlite \
     pdo_mysql \
     pdo_pgsql \
-    pcntl \
-    redis \
-    zip \
-    exif \
-    imagick
+    zip
 
 # Set working directory
 WORKDIR /app
