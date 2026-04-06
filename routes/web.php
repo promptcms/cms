@@ -16,6 +16,10 @@ Route::post('/admin/ai-chat/stream', [AiChatStreamController::class, 'stream'])
     ->middleware(['web', 'auth'])
     ->name('admin.ai-chat.stream');
 
+Route::get('/admin/ai-chat/media-search', [AiChatStreamController::class, 'searchMedia'])
+    ->middleware(['web', 'auth'])
+    ->name('admin.ai-chat.media-search');
+
 Route::middleware(EnsureCmsCssCompiled::class)->group(function () {
     Route::get('/', [PageController::class, 'home'])->name('home');
     Route::get('/{slug}', [PageController::class, 'show'])->where('slug', '[a-z0-9\-\/]+')->name('page.show');

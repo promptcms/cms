@@ -150,36 +150,36 @@ docker compose up -d
 
 Migrations run automatically on container start.
 
-## ZIP-Installation (Shared Hosting / kein Terminal nötig)
+## ZIP Installation (Shared Hosting / No Terminal Required)
 
-Die einfachste Methode — kein Docker, kein Git, kein Terminal erforderlich.
+The simplest method — no Docker, no Git, no terminal required.
 
-### Voraussetzungen
+### Prerequisites
 
-- Webhosting mit PHP 8.4+ und den Extensions: `pdo_sqlite`, `mbstring`, `openssl`, `gd`, `fileinfo`
-- Document Root muss auf den `public/`-Ordner zeigen
-- Frontend-Assets (`public/build/`) müssen im ZIP enthalten sein (werden beim Release vorgebaut)
+- Web hosting with PHP 8.4+ and the extensions: `pdo_sqlite`, `mbstring`, `openssl`, `gd`, `fileinfo`
+- Document root must point to the `public/` directory
+- Frontend assets (`public/build/`) must be included in the ZIP (pre-built during release)
 
-### Schritte
+### Steps
 
-1. **ZIP herunterladen** und auf dem Server entpacken
-2. **Document Root** des Webservers auf den `public/`-Ordner setzen
-3. **Website im Browser öffnen** — der Installer startet automatisch
-4. **Formular ausfüllen**: Name, E-Mail, Passwort, Website-Name
-5. **"Installieren" klicken** — fertig!
+1. **Download the ZIP** and extract it on the server
+2. **Set the document root** of the web server to the `public/` directory
+3. **Open the website in your browser** — the installer starts automatically
+4. **Fill out the form**: name, email, password, website name
+5. **Click "Install"** — done!
 
-Der Installer erledigt automatisch:
-- `.env`-Datei erstellen
-- `APP_KEY` generieren
-- Verzeichnisstruktur anlegen (`storage/`, `database/`, etc.)
-- SQLite-Datenbank erstellen
-- Migrationen ausführen
-- Storage-Symlink erstellen (`public/storage` → `storage/app/public`)
-- Admin-User und CMS-Grunddaten anlegen
+The installer automatically handles:
+- Creating the `.env` file
+- Generating the `APP_KEY`
+- Setting up the directory structure (`storage/`, `database/`, etc.)
+- Creating the SQLite database
+- Running migrations
+- Creating the storage symlink (`public/storage` → `storage/app/public`)
+- Creating the admin user and initial CMS data
 
 ### Apache (.htaccess)
 
-Funktioniert out-of-the-box — die `.htaccess` im `public/`-Ordner ist bereits konfiguriert.
+Works out of the box — the `.htaccess` in the `public/` directory is already configured.
 
 ### Nginx
 
@@ -207,11 +207,11 @@ server {
 }
 ```
 
-### Hinweis: Storage-Symlink
+### Note: Storage Symlink
 
-Der Installer erstellt automatisch einen Symlink `public/storage` → `storage/app/public`, damit hochgeladene Medien über den Browser erreichbar sind. Falls dein Hosting keine Symlinks erlaubt, kopiere den Inhalt von `storage/app/public/` manuell nach `public/storage/`.
+The installer automatically creates a symlink `public/storage` → `storage/app/public` so that uploaded media is accessible via the browser. If your hosting does not support symlinks, manually copy the contents of `storage/app/public/` to `public/storage/`.
 
-## Entwickler-Installation (mit Terminal)
+## Developer Installation (with Terminal)
 
 ```bash
 # Prerequisites: PHP 8.4+, Composer, Node.js 20+
@@ -245,7 +245,7 @@ php artisan serve
 
 Set your OpenAI API key either via:
 - `.env` file: `OPENAI_API_KEY=sk-...`
-- Admin panel: **Einstellungen** (System Settings page)
+- Admin panel: **Settings** (System Settings page)
 
 ### Changing the AI Model
 

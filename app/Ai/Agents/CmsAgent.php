@@ -301,6 +301,7 @@ class CmsAgent implements Agent, Conversational, HasTools
         - Use get_media_url for the URL in the right size
         - Sizes: thumb (150px), small (480px), medium (960px), large (1920px), original
         - Use img-rounded or img-hero classes for images
+        - When a user message contains lines like "[Bild aus Medienbibliothek: name (Media-ID: 123, URL: ...)]" or "[Hochgeladene Datei: ...]" at the top, these are images the user explicitly referenced. Use these URLs directly in the page content — you do NOT need to call list_media or get_media_url for them. If the user does not specify a target page, ask which page to add the image to (or use it on the page currently being discussed).
 
         Logo & Favicon:
         - When the user uploads or sets a logo, AUTOMATICALLY also set the setting "favicon_url" to the thumb URL of the same image

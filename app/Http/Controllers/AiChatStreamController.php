@@ -6,10 +6,12 @@ use App\Ai\Agents\CmsAgent;
 use App\Models\AiSession;
 use App\Models\MediaContainer;
 use App\Services\CssBuildService;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
+use Spatie\MediaLibrary\MediaCollections\Models\Media;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AiChatStreamController extends Controller
@@ -19,10 +21,12 @@ class AiChatStreamController extends Controller
         set_time_limit(300);
 
         $request->validate([
-            'prompt' => 'required_without:attachments|nullable|string|max:10000',
+            'prompt' => 'required_without_all:attachments,mentioned_media_ids|nullable|string|max:10000',
             'session_id' => 'nullable|string',
             'attachments' => 'nullable|array|max:10',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,svg,bmp,ico',
+            'mentioned_media_ids' => 'nullable|array|max:20',
+            'mentioned_media_ids.*' => 'integer',
         ]);
 
         $prompt = $request->input('prompt', '');
@@ -45,6 +49,27 @@ class AiChatStreamController extends Controller
                     'name' => $media->file_name,
                     'url' => $media->getUrl(),
                     'mime_type' => $media->mime_type,
+                    'from_library' => false,
+                ];
+            }
+        }
+
+        // Resolve @-mentioned media library items
+        $mentionedIds = collect($request->input('mentioned_media_ids', []))
+            ->filter()
+            ->unique()
+            ->values();
+
+        if ($mentionedIds->isNotEmpty()) {
+            $mentionedMedia = Media::query()->whereIn('id', $mentionedIds)->get();
+
+            foreach ($mentionedMedia as $media) {
+                $attachmentData[] = [
+                    'id' => $media->id,
+                    'name' => $media->file_name,
+                    'url' => $media->getUrl(),
+                    'mime_type' => $media->mime_type,
+                    'from_library' => true,
                 ];
             }
         }
@@ -54,7 +79,11 @@ class AiChatStreamController extends Controller
 
         if (! empty($attachmentData)) {
             $fileDescs = collect($attachmentData)->map(function (array $att) {
-                return "[Hochgeladene Datei: {$att['name']} (URL: {$att['url']})]";
+                $label = ($att['from_library'] ?? false)
+                    ? 'Bild aus Medienbibliothek'
+                    : 'Hochgeladene Datei';
+
+                return "[{$label}: {$att['name']} (Media-ID: {$att['id']}, URL: {$att['url']})]";
             })->implode("\n");
             $fullPrompt = $fileDescs."\n\n".$prompt;
         }
@@ -127,6 +156,39 @@ class AiChatStreamController extends Controller
             'Connection' => 'keep-alive',
             'X-Accel-Buffering' => 'no',
         ]);
+    }
+
+    /**
+     * Search the media library for image files (used by chat @-mention autocomplete).
+     */
+    public function searchMedia(Request $request): JsonResponse
+    {
+        $query = trim((string) $request->input('q', ''));
+
+        $media = Media::query()
+            ->where('mime_type', 'like', 'image/%')
+            ->when($query !== '', function ($q) use ($query) {
+                $q->where(function ($q) use ($query) {
+                    $q->where('name', 'like', "%{$query}%")
+                        ->orWhere('file_name', 'like', "%{$query}%");
+                });
+            })
+            ->latest('id')
+            ->limit(10)
+            ->get();
+
+        $items = $media->map(function (Media $m): array {
+            return [
+                'id' => $m->id,
+                'name' => $m->name,
+                'file_name' => $m->file_name,
+                'mime_type' => $m->mime_type,
+                'url' => $m->getUrl(),
+                'thumb_url' => $m->hasGeneratedConversion('thumb') ? $m->getUrl('thumb') : $m->getUrl(),
+            ];
+        })->all();
+
+        return response()->json($items);
     }
 
     /**

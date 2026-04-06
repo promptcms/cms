@@ -233,7 +233,27 @@
                     </template>
                 </div>
 
-                <form @submit.prevent="sendMessage" class="mx-auto flex max-w-3xl gap-2 sm:gap-3">
+                <form @submit.prevent="sendMessage" class="relative mx-auto flex max-w-3xl gap-2 sm:gap-3">
+                    {{-- @-mention dropdown for media library --}}
+                    <div x-show="mentionState.open" x-cloak
+                         @click.outside="mentionState.open = false"
+                         class="absolute bottom-full left-0 right-0 mb-2 max-h-72 overflow-y-auto rounded-xl border border-gray-200 bg-white shadow-lg dark:border-gray-700 dark:bg-gray-800">
+                        <div x-show="mentionState.loading && mentionState.items.length === 0" class="px-3 py-2 text-xs text-gray-500">Suche...</div>
+                        <div x-show="!mentionState.loading && mentionState.items.length === 0" class="px-3 py-2 text-xs text-gray-500">Keine Medien gefunden</div>
+                        <template x-for="(item, i) in mentionState.items" :key="item.id">
+                            <button type="button"
+                                @click="selectMention(item)"
+                                @mouseenter="mentionState.selectedIndex = i"
+                                :class="i === mentionState.selectedIndex ? 'bg-primary-50 dark:bg-primary-900/30' : ''"
+                                class="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-gray-50 dark:hover:bg-gray-700">
+                                <img :src="item.thumb_url" class="h-9 w-9 flex-shrink-0 rounded object-cover bg-gray-100 dark:bg-gray-700">
+                                <div class="min-w-0 flex-1">
+                                    <div class="truncate text-xs font-medium text-gray-900 dark:text-white" x-text="item.name"></div>
+                                    <div class="truncate text-[10px] text-gray-500 dark:text-gray-400" x-text="item.file_name"></div>
+                                </div>
+                            </button>
+                        </template>
+                    </div>
                     {{-- File upload button --}}
                     <label class="inline-flex cursor-pointer items-center rounded-xl border border-gray-300 bg-gray-50 px-2.5 py-2.5 text-gray-500 hover:bg-gray-100 hover:text-gray-700 dark:border-gray-600 dark:bg-gray-800 dark:text-gray-400 dark:hover:bg-gray-700 dark:hover:text-gray-300 transition-colors"
                            :class="isStreaming ? 'opacity-50 pointer-events-none' : ''">
@@ -254,14 +274,29 @@
                     <textarea
                         x-model="prompt"
                         x-ref="promptInput"
-                        placeholder="Beschreibe, was du möchtest..."
+                        placeholder="Beschreibe, was du möchtest... (@ für Medien)"
                         rows="1"
                         class="flex-1 resize-none rounded-xl border-gray-300 bg-gray-50 px-4 py-2.5 text-sm shadow-sm focus:border-primary-500 focus:ring-primary-500 dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:placeholder-gray-400"
                         style="max-height: 10rem"
                         :disabled="isStreaming"
                         autofocus
-                        x-on:input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'"
-                        x-on:keydown.enter.prevent="if (!$event.shiftKey) { sendMessage(); } else { prompt += '\n'; $nextTick(() => { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; }) }"
+                        x-on:input="$el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; checkMention()"
+                        x-on:click="checkMention()"
+                        x-on:keyup.arrow-left="checkMention()"
+                        x-on:keyup.arrow-right="checkMention()"
+                        x-on:keydown="
+                            if (handleMentionKeydown($event)) return;
+                            if ($event.key === 'Enter') {
+                                if ($event.shiftKey) {
+                                    $event.preventDefault();
+                                    prompt += '\n';
+                                    $nextTick(() => { $el.style.height = 'auto'; $el.style.height = $el.scrollHeight + 'px'; });
+                                } else {
+                                    $event.preventDefault();
+                                    sendMessage();
+                                }
+                            }
+                        "
                     ></textarea>
                     {{-- Send button --}}
                     <button
@@ -304,6 +339,15 @@
             pendingUserMessage: '',
             pendingAttachments: [],
             attachments: [],  // {file, name, type, preview}
+            mentionedMedia: [], // {id, name, file_name, url, mime_type, thumb_url}
+            mentionState: {
+                open: false,
+                query: '',
+                items: [],
+                selectedIndex: 0,
+                loading: false,
+                requestId: 0,
+            },
             toolCalls: [],
             thinkingSteps: [],  // {label, status: 'running'|'done'}
             thinkingOpen: false,
@@ -373,6 +417,91 @@
                     }
                     this.attachments.push(entry);
                 }
+            },
+
+            async checkMention() {
+                const textarea = this.$refs.promptInput;
+                if (!textarea) return;
+                const cursor = textarea.selectionStart;
+                const before = this.prompt.slice(0, cursor);
+                // Match @ at start or after whitespace, followed by non-space/non-@ chars
+                const match = before.match(/(?:^|\s)@([^\s@]*)$/);
+                if (!match) {
+                    this.mentionState.open = false;
+                    return;
+                }
+                const query = match[1];
+                this.mentionState.query = query;
+                this.mentionState.open = true;
+                this.mentionState.loading = true;
+                const reqId = ++this.mentionState.requestId;
+                try {
+                    const url = '{{ route("admin.ai-chat.media-search") }}?q=' + encodeURIComponent(query);
+                    const res = await fetch(url, {
+                        headers: { 'Accept': 'application/json' },
+                        credentials: 'same-origin',
+                    });
+                    if (reqId !== this.mentionState.requestId) return;
+                    const items = await res.json();
+                    this.mentionState.items = Array.isArray(items) ? items : [];
+                    this.mentionState.selectedIndex = 0;
+                } catch (e) {
+                    this.mentionState.items = [];
+                } finally {
+                    if (reqId === this.mentionState.requestId) {
+                        this.mentionState.loading = false;
+                    }
+                }
+            },
+
+            selectMention(item) {
+                const textarea = this.$refs.promptInput;
+                if (!textarea) return;
+                const cursor = textarea.selectionStart;
+                const before = this.prompt.slice(0, cursor);
+                const after = this.prompt.slice(cursor);
+                // Replace the trailing @query with @name (sanitized — no spaces)
+                const safeName = (item.name || item.file_name || ('media-' + item.id)).replace(/\s+/g, '_');
+                const newBefore = before.replace(/@([^\s@]*)$/, '@' + safeName + ' ');
+                this.prompt = newBefore + after;
+                if (!this.mentionedMedia.find(m => m.id === item.id)) {
+                    this.mentionedMedia.push(item);
+                }
+                this.mentionState.open = false;
+                this.$nextTick(() => {
+                    textarea.focus();
+                    const pos = newBefore.length;
+                    textarea.setSelectionRange(pos, pos);
+                    textarea.style.height = 'auto';
+                    textarea.style.height = textarea.scrollHeight + 'px';
+                });
+            },
+
+            handleMentionKeydown(e) {
+                if (!this.mentionState.open) return false;
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    this.mentionState.open = false;
+                    return true;
+                }
+                if (this.mentionState.items.length === 0) return false;
+                if (e.key === 'ArrowDown') {
+                    e.preventDefault();
+                    this.mentionState.selectedIndex = (this.mentionState.selectedIndex + 1) % this.mentionState.items.length;
+                    return true;
+                }
+                if (e.key === 'ArrowUp') {
+                    e.preventDefault();
+                    const len = this.mentionState.items.length;
+                    this.mentionState.selectedIndex = (this.mentionState.selectedIndex - 1 + len) % len;
+                    return true;
+                }
+                if (e.key === 'Enter' || e.key === 'Tab') {
+                    e.preventDefault();
+                    this.selectMention(this.mentionState.items[this.mentionState.selectedIndex]);
+                    return true;
+                }
+                return false;
             },
 
             removeAttachment(index) {
@@ -446,11 +575,21 @@
 
             async sendMessage() {
                 const text = this.prompt.trim();
-                if ((!text && this.attachments.length === 0) || this.isStreaming) return;
+                if ((!text && this.attachments.length === 0 && this.mentionedMedia.length === 0) || this.isStreaming) return;
+
+                // Only keep mentions that are still referenced in the text
+                const activeMentions = this.mentionedMedia.filter(m => {
+                    const safeName = (m.name || m.file_name || ('media-' + m.id)).replace(/\s+/g, '_');
+                    return text.includes('@' + safeName);
+                });
 
                 this.pendingUserMessage = text;
-                this.pendingAttachments = [...this.attachments];
+                this.pendingAttachments = [
+                    ...this.attachments,
+                    ...activeMentions.map(m => ({ name: m.file_name, type: m.mime_type, preview: m.thumb_url || m.url })),
+                ];
                 this.prompt = '';
+                this.mentionState.open = false;
                 this.isStreaming = true;
                 this.streamedText = '';
                 this.toolCalls = [];
@@ -467,7 +606,11 @@
                 for (const att of this.attachments) {
                     formData.append('attachments[]', att.file);
                 }
+                for (const m of activeMentions) {
+                    formData.append('mentioned_media_ids[]', m.id);
+                }
                 this.attachments = [];
+                this.mentionedMedia = [];
 
                 try {
                     const response = await fetch('{{ route("admin.ai-chat.stream") }}', {
