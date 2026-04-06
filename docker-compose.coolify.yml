@@ -35,7 +35,7 @@ services:
     image: "${COOLIFY_IMAGE:-ghcr.io/promptcms/cms:latest}"
     container_name: promptcms-queue
     restart: unless-stopped
-    entrypoint: []
+    entrypoint: ~
     command: php artisan queue:work --sleep=3 --tries=3 --max-time=3600 --timeout=120
     environment:
       APP_ENV: "${APP_ENV:-production}"
