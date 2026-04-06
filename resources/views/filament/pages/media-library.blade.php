@@ -21,7 +21,7 @@
 
         {{-- Upload & Search Bar --}}
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-center gap-3">
+            <div class="flex flex-wrap items-center gap-3">
                 <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-500 transition-colors">
                     <x-heroicon-m-arrow-up-tray class="h-4 w-4" />
                     Hochladen
@@ -33,8 +33,31 @@
                         class="hidden"
                     >
                 </label>
+                <button
+                    type="button"
+                    wire:click="exportLibrary"
+                    wire:loading.attr="disabled"
+                    class="inline-flex items-center gap-1.5 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                    title="Komplette Medienbibliothek als ZIP herunterladen"
+                >
+                    <x-heroicon-m-arrow-down-tray class="h-4 w-4" />
+                    Export (ZIP)
+                </button>
+                <label class="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    <x-heroicon-m-arrow-up-on-square class="h-4 w-4" />
+                    Import (ZIP)
+                    <input
+                        type="file"
+                        wire:model="libraryImport"
+                        accept="application/zip,.zip"
+                        class="hidden"
+                    >
+                </label>
                 <div wire:loading wire:target="uploads" class="text-sm text-gray-500 dark:text-gray-400">
                     Wird hochgeladen...
+                </div>
+                <div wire:loading wire:target="libraryImport" class="text-sm text-gray-500 dark:text-gray-400">
+                    Import wird verarbeitet...
                 </div>
             </div>
 

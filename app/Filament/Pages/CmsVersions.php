@@ -8,9 +8,15 @@ use App\Services\CmsSnapshotService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class CmsVersions extends Page
 {
+    use WithFileUploads;
+
     protected static string|\BackedEnum|null $navigationIcon = 'heroicon-o-clock';
 
     protected static ?string $navigationLabel = 'Versionen';
@@ -32,6 +38,8 @@ class CmsVersions extends Page
     public string $snapshotLabel = '';
 
     public string $snapshotDescription = '';
+
+    public ?TemporaryUploadedFile $snapshotImport = null;
 
     public function mount(): void
     {
@@ -139,6 +147,67 @@ class CmsVersions extends Page
         $this->loadData();
 
         Notification::make()->title('Snapshot gelöscht')->success()->send();
+    }
+
+    public function exportSnapshot(string $snapshotId): ?StreamedResponse
+    {
+        $snapshot = CmsSnapshot::find($snapshotId);
+
+        if (! $snapshot) {
+            Notification::make()->title('Snapshot nicht gefunden')->danger()->send();
+
+            return null;
+        }
+
+        $json = app(CmsSnapshotService::class)->exportSnapshot($snapshot);
+
+        $slug = Str::slug($snapshot->label) ?: 'snapshot';
+        $date = $snapshot->created_at->format('Y-m-d_H-i');
+        $filename = "promptcms-snapshot-{$slug}-{$date}.json";
+
+        return response()->streamDownload(
+            fn () => print ($json),
+            $filename,
+            ['Content-Type' => 'application/json'],
+        );
+    }
+
+    public function updatedSnapshotImport(): void
+    {
+        if (! $this->snapshotImport) {
+            return;
+        }
+
+        try {
+            $json = file_get_contents($this->snapshotImport->getRealPath());
+
+            if ($json === false) {
+                throw new \RuntimeException('Datei konnte nicht gelesen werden.');
+            }
+
+            $user = auth()->user();
+
+            $snapshot = app(CmsSnapshotService::class)->importSnapshot(
+                json: $json,
+                createdBy: $user?->email ?? 'admin',
+            );
+
+            $this->loadData();
+
+            Notification::make()
+                ->title('Snapshot importiert')
+                ->body("'{$snapshot->label}' wurde als neuer Snapshot angelegt. Klicke auf 'Wiederherstellen', um ihn anzuwenden.")
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Import fehlgeschlagen')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        } finally {
+            $this->snapshotImport = null;
+        }
     }
 
     public function setActiveTab(string $tab): void

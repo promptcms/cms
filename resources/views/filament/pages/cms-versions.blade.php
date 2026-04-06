@@ -25,10 +25,22 @@
     @if($activeTab === 'snapshots')
         {{-- Create Snapshot --}}
         <div class="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
-            <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Neuen Snapshot erstellen</h3>
-            <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                Speichert den kompletten aktuellen Zustand aller Seiten, Menüs und Einstellungen.
-            </p>
+            <div class="flex items-start justify-between gap-3">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">Neuen Snapshot erstellen</h3>
+                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Speichert den kompletten aktuellen Zustand aller Seiten, Menüs und Einstellungen.
+                    </p>
+                </div>
+                <label class="inline-flex flex-shrink-0 cursor-pointer items-center gap-1.5 rounded-lg bg-gray-100 px-3 py-2 text-xs font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors">
+                    <x-heroicon-m-arrow-up-tray class="h-4 w-4" />
+                    Snapshot importieren
+                    <input type="file" wire:model="snapshotImport" accept="application/json,.json" class="hidden">
+                </label>
+            </div>
+            <div wire:loading wire:target="snapshotImport" class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                Import wird verarbeitet...
+            </div>
             <div class="mt-3 flex flex-col gap-3 sm:flex-row">
                 <div class="flex-1">
                     <input
@@ -87,6 +99,15 @@
                             </div>
                         </div>
                         <div class="ml-4 flex items-center gap-2">
+                            <button
+                                wire:click="exportSnapshot('{{ $snapshot->id }}')"
+                                wire:loading.attr="disabled"
+                                class="inline-flex items-center gap-1 rounded-lg bg-gray-50 px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                                title="Als JSON-Datei herunterladen"
+                            >
+                                <x-heroicon-m-arrow-down-tray class="h-3.5 w-3.5" />
+                                Export
+                            </button>
                             <button
                                 wire:click="restoreSnapshot('{{ $snapshot->id }}')"
                                 wire:loading.attr="disabled"

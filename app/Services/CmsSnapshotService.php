@@ -8,15 +8,43 @@ use App\Models\Node;
 use App\Models\NodeMeta;
 use App\Models\Setting;
 use Illuminate\Support\Facades\DB;
+use InvalidArgumentException;
 
 class CmsSnapshotService
 {
+    /**
+     * Current snapshot data format. Bump this whenever the payload shape changes
+     * and add a corresponding migration in SnapshotMigrator::MIGRATIONS.
+     */
+    public const FORMAT_VERSION = 2;
+
+    public function __construct(private readonly SnapshotMigrator $migrator) {}
+
     /**
      * Create a full snapshot of the entire CMS state.
      */
     public function createSnapshot(string $label, ?string $description = null, string $createdBy = 'admin'): CmsSnapshot
     {
-        $snapshot = [
+        return CmsSnapshot::create([
+            'label' => $label,
+            'description' => $description,
+            'snapshot' => $this->buildPayload(),
+            'created_by' => $createdBy,
+        ]);
+    }
+
+    /**
+     * Build a snapshot payload from the current CMS state.
+     *
+     * @return array<string, mixed>
+     */
+    public function buildPayload(): array
+    {
+        return [
+            'format_version' => self::FORMAT_VERSION,
+            'app_version' => (string) config('app.version', 'dev'),
+            'exported_at' => now()->toIso8601String(),
+
             'nodes' => Node::with('meta')->get()->map(fn (Node $node) => [
                 'id' => $node->id,
                 'type' => $node->type->value,
@@ -48,17 +76,7 @@ class CmsSnapshotService
                 'value' => $s->getRawOriginal('value'),
                 'group' => $s->group,
             ])->all(),
-
-            'snapshot_version' => '1.0',
-            'created_at' => now()->toIso8601String(),
         ];
-
-        return CmsSnapshot::create([
-            'label' => $label,
-            'description' => $description,
-            'snapshot' => $snapshot,
-            'created_by' => $createdBy,
-        ]);
     }
 
     /**
@@ -66,7 +84,10 @@ class CmsSnapshotService
      */
     public function restoreSnapshot(CmsSnapshot $snapshot): void
     {
-        $data = $snapshot->snapshot;
+        $data = $this->migrator->migrate(
+            $snapshot->snapshot ?? [],
+            self::FORMAT_VERSION,
+        );
 
         DB::transaction(function () use ($data) {
             // Clear existing data
@@ -122,13 +143,79 @@ class CmsSnapshotService
     }
 
     /**
+     * Export a snapshot as a JSON string ready for file download.
+     */
+    public function exportSnapshot(CmsSnapshot $snapshot): string
+    {
+        $payload = $this->migrator->migrate(
+            $snapshot->snapshot ?? [],
+            self::FORMAT_VERSION,
+        );
+
+        $envelope = [
+            'kind' => 'promptcms-snapshot',
+            'format_version' => self::FORMAT_VERSION,
+            'app_version' => (string) config('app.version', 'dev'),
+            'exported_at' => now()->toIso8601String(),
+            'label' => $snapshot->label,
+            'description' => $snapshot->description,
+            'data' => $payload,
+        ];
+
+        return (string) json_encode($envelope, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+    }
+
+    /**
+     * Import a snapshot file as a new CmsSnapshot record (does NOT restore — that is a separate step).
+     */
+    public function importSnapshot(string $json, string $createdBy = 'admin'): CmsSnapshot
+    {
+        $envelope = json_decode($json, true);
+
+        if (! is_array($envelope)) {
+            throw new InvalidArgumentException('Snapshot file is not valid JSON.');
+        }
+
+        if (($envelope['kind'] ?? null) !== 'promptcms-snapshot') {
+            throw new InvalidArgumentException('File is not a PromptCMS snapshot export.');
+        }
+
+        $data = $envelope['data'] ?? null;
+
+        if (! is_array($data)) {
+            throw new InvalidArgumentException('Snapshot export is missing the data payload.');
+        }
+
+        // Migrate to current format (also throws if newer than supported)
+        $data = $this->migrator->migrate($data, self::FORMAT_VERSION);
+
+        $label = (string) ($envelope['label'] ?? 'Imported snapshot');
+        $description = $envelope['description'] ?? null;
+        $exportedAt = $envelope['exported_at'] ?? null;
+
+        $importNote = 'Imported'.($exportedAt ? ' (originally exported '.$exportedAt.')' : '');
+        $description = $description ? $description.' — '.$importNote : $importNote;
+
+        return CmsSnapshot::create([
+            'label' => '[Import] '.$label,
+            'description' => $description,
+            'snapshot' => $data,
+            'created_by' => $createdBy,
+        ]);
+    }
+
+    /**
      * Get a summary of differences between current state and a snapshot.
      *
      * @return array<string, mixed>
      */
     public function diffSnapshot(CmsSnapshot $snapshot): array
     {
-        $data = $snapshot->snapshot;
+        $data = $this->migrator->migrate(
+            $snapshot->snapshot ?? [],
+            self::FORMAT_VERSION,
+        );
+
         $snapshotSlugs = collect($data['nodes'] ?? [])->pluck('slug')->all();
         $currentSlugs = Node::pluck('slug')->all();
 
@@ -136,7 +223,7 @@ class CmsSnapshotService
             'pages_added' => array_values(array_diff($currentSlugs, $snapshotSlugs)),
             'pages_removed' => array_values(array_diff($snapshotSlugs, $currentSlugs)),
             'pages_in_both' => array_values(array_intersect($currentSlugs, $snapshotSlugs)),
-            'settings_count' => count($data['settings'] ?? []),
+            'settings_count' => \count($data['settings'] ?? []),
             'current_settings_count' => Setting::count(),
         ];
     }

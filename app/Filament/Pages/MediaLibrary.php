@@ -3,12 +3,14 @@
 namespace App\Filament\Pages;
 
 use App\Models\MediaContainer;
+use App\Services\MediaLibraryExportService;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 use Livewire\WithFileUploads;
 use Spatie\MediaLibrary\MediaCollections\Models\Media;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class MediaLibrary extends Page
 {
@@ -35,6 +37,8 @@ class MediaLibrary extends Page
     public ?array $selectedMedia = null;
 
     public string $search = '';
+
+    public ?TemporaryUploadedFile $libraryImport = null;
 
     public function mount(): void
     {
@@ -138,5 +142,46 @@ class MediaLibrary extends Page
     public function copyUrl(string $url): void
     {
         $this->dispatch('copy-to-clipboard', url: $url);
+    }
+
+    public function exportLibrary(): StreamedResponse
+    {
+        $tmpPath = app(MediaLibraryExportService::class)->export();
+
+        $filename = 'promptcms-media-'.now()->format('Y-m-d_H-i').'.zip';
+
+        return response()->streamDownload(function () use ($tmpPath): void {
+            readfile($tmpPath);
+            @unlink($tmpPath);
+        }, $filename, [
+            'Content-Type' => 'application/zip',
+        ]);
+    }
+
+    public function updatedLibraryImport(): void
+    {
+        if (! $this->libraryImport) {
+            return;
+        }
+
+        try {
+            $result = app(MediaLibraryExportService::class)->import($this->libraryImport->getRealPath());
+
+            $this->loadMedia();
+
+            Notification::make()
+                ->title('Medienbibliothek importiert')
+                ->body("{$result['imported']} Datei(en) importiert, {$result['skipped']} übersprungen (bereits vorhanden).")
+                ->success()
+                ->send();
+        } catch (\Throwable $e) {
+            Notification::make()
+                ->title('Import fehlgeschlagen')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        } finally {
+            $this->libraryImport = null;
+        }
     }
 }
