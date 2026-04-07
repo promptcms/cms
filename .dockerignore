@@ -6,6 +6,7 @@
 .nova
 .zed
 .env
+.env.example
 .env.backup
 .env.production
 .phpunit.cache

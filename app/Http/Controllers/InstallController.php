@@ -203,6 +203,12 @@ class InstallController extends Controller
             return;
         }
 
+        // In Docker, env vars come from the container — don't create a .env
+        // that would override them. Only create one for non-Docker installs.
+        if (env('SERVER_NAME') !== null || env('APP_KEY') !== null) {
+            return;
+        }
+
         $examplePath = base_path('.env.example');
 
         if (file_exists($examplePath)) {

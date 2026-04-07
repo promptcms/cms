@@ -10,7 +10,7 @@ services:
       SERVER_NAME: ":80"
       APP_NAME: "${APP_NAME:-PromptCMS}"
       APP_ENV: "${APP_ENV:-production}"
-      APP_KEY: "${SERVICE_BASE64_64}"
+      APP_KEY: "${SERVICE_BASE64_32}"
       APP_DEBUG: "${APP_DEBUG:-false}"
       APP_URL: "${CMS_URL:-https://localhost}"
       DB_CONNECTION: "${DB_CONNECTION:-sqlite}"
