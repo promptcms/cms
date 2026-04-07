@@ -3,14 +3,13 @@
 	frankenphp
 	order php_server before file_server
 
-	# Use environment variable for domain, fallback to localhost
-	# Set SERVER_NAME env var to your domain for automatic SSL
+	# Trust reverse proxy headers (Traefik, Coolify, etc.)
+	servers {
+		trusted_proxies static private_ranges
+	}
 }
 
 {$SERVER_NAME:localhost} {
-	# Trust reverse proxy headers (Traefik, Coolify, etc.)
-	trusted_proxies private_ranges
-
 	root * /app/public
 
 	# Encode responses
