@@ -68,8 +68,8 @@ class InstallController extends Controller
                 ->withInput();
         }
 
-        // Step 3: Write API key to .env
-        $this->setEnvValue('OPENAI_API_KEY', $validated['openai_api_key']);
+        // Step 3: Store API key encrypted in database (persists across container redeploys)
+        Setting::set('openai_api_key', encrypt($validated['openai_api_key']), 'ai');
 
         // Step 4: Run migrations
         try {

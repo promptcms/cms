@@ -71,11 +71,14 @@ class CmsSnapshotService
                 'target' => $item->target,
             ])->all(),
 
-            'settings' => Setting::all()->map(fn (Setting $s) => [
-                'key' => $s->key,
-                'value' => $s->getRawOriginal('value'),
-                'group' => $s->group,
-            ])->all(),
+            'settings' => Setting::query()
+                ->where('group', '!=', 'ai')
+                ->get()
+                ->map(fn (Setting $s) => [
+                    'key' => $s->key,
+                    'value' => $s->getRawOriginal('value'),
+                    'group' => $s->group,
+                ])->all(),
         ];
     }
 
@@ -90,11 +93,11 @@ class CmsSnapshotService
         );
 
         DB::transaction(function () use ($data) {
-            // Clear existing data
+            // Clear existing content data (preserve system settings like API keys)
             MenuItem::query()->delete();
             NodeMeta::query()->delete();
             Node::query()->delete();
-            Setting::query()->delete();
+            Setting::query()->where('group', '!=', 'ai')->delete();
 
             // Restore nodes
             foreach ($data['nodes'] ?? [] as $nodeData) {
