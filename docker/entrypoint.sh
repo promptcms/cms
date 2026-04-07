@@ -3,12 +3,9 @@ set -e
 
 echo "=== PromptCMS starting ==="
 
-# Normalize APP_KEY: Coolify's SERVICE_BASE64_32_* generates a raw base64 string
-# without the "base64:" prefix that Laravel requires — add it if missing.
-if [ -n "$APP_KEY" ] && [ "${APP_KEY#base64:}" = "$APP_KEY" ]; then
-    export APP_KEY="base64:$APP_KEY"
-fi
-
+# Generate APP_KEY if not set. If provided without "base64:" prefix
+# (e.g. from Coolify's SERVICE_BASE64_32), use it as-is — a 32-char
+# ASCII string is a valid 256-bit key for AES-256-CBC.
 if [ -z "$APP_KEY" ]; then
     echo "Generating application key..."
     export APP_KEY=$(php artisan key:generate --show --no-interaction --force)
