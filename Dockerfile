@@ -66,7 +66,7 @@ RUN mkdir -p \
     database \
     plugins \
     public/css \
-    public/storage
+&& ln -sf /app/storage/app/public /app/public/storage
 
 # Create SQLite database if it doesn't exist
 RUN touch database/database.sqlite

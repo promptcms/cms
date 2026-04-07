@@ -99,17 +99,17 @@ class CmsSnapshotService
             Node::query()->delete();
             Setting::query()->where('group', '!=', 'ai')->delete();
 
-            // Restore nodes
+            // Restore nodes (force ID to preserve snapshot references)
             foreach ($data['nodes'] ?? [] as $nodeData) {
-                $node = Node::query()->create([
-                    'id' => $nodeData['id'],
-                    'type' => $nodeData['type'],
-                    'slug' => $nodeData['slug'],
-                    'title' => $nodeData['title'],
-                    'status' => $nodeData['status'],
-                    'parent_id' => $nodeData['parent_id'] ?? null,
-                    'sort_order' => $nodeData['sort_order'] ?? 0,
-                ]);
+                $node = new Node;
+                $node->id = $nodeData['id'];
+                $node->type = $nodeData['type'];
+                $node->slug = $nodeData['slug'];
+                $node->title = $nodeData['title'];
+                $node->status = $nodeData['status'];
+                $node->parent_id = $nodeData['parent_id'] ?? null;
+                $node->sort_order = $nodeData['sort_order'] ?? 0;
+                $node->save();
 
                 foreach ($nodeData['meta'] ?? [] as $meta) {
                     $node->meta()->create([
@@ -120,18 +120,18 @@ class CmsSnapshotService
                 }
             }
 
-            // Restore menu items
+            // Restore menu items (force ID to preserve parent/child references)
             foreach ($data['menu_items'] ?? [] as $item) {
-                MenuItem::query()->create([
-                    'id' => $item['id'],
-                    'menu_id' => $item['menu_id'],
-                    'label' => $item['label'],
-                    'url' => $item['url'] ?? null,
-                    'node_id' => $item['node_id'] ?? null,
-                    'parent_id' => $item['parent_id'] ?? null,
-                    'sort_order' => $item['sort_order'] ?? 0,
-                    'target' => $item['target'] ?? '_self',
-                ]);
+                $menuItem = new MenuItem;
+                $menuItem->id = $item['id'];
+                $menuItem->menu_id = $item['menu_id'];
+                $menuItem->label = $item['label'];
+                $menuItem->url = $item['url'] ?? null;
+                $menuItem->node_id = $item['node_id'] ?? null;
+                $menuItem->parent_id = $item['parent_id'] ?? null;
+                $menuItem->sort_order = $item['sort_order'] ?? 0;
+                $menuItem->target = $item['target'] ?? '_self';
+                $menuItem->save();
             }
 
             // Restore settings
