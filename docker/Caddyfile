@@ -8,6 +8,9 @@
 }
 
 {$SERVER_NAME:localhost} {
+	# Trust reverse proxy headers (Traefik, Coolify, etc.)
+	trusted_proxies private_ranges
+
 	root * /app/public
 
 	# Encode responses
