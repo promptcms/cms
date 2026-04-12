@@ -100,7 +100,7 @@
                                             @endforeach
                                         </div>
                                     @endif
-                                    {{ $message['content'] }}
+                                    {!! nl2br(e($message['content'])) !!}
                                 @endif
                             </div>
                         </div>
@@ -127,7 +127,7 @@
                                         </template>
                                     </div>
                                 </template>
-                                <span x-text="pendingUserMessage"></span>
+                                <span class="whitespace-pre-wrap" x-text="pendingUserMessage"></span>
                             </div>
                         </div>
                     </template>
@@ -589,6 +589,7 @@
                     ...activeMentions.map(m => ({ name: m.file_name, type: m.mime_type, preview: m.thumb_url || m.url })),
                 ];
                 this.prompt = '';
+                this.$nextTick(() => { this.$refs.promptInput.style.height = 'auto'; });
                 this.mentionState.open = false;
                 this.isStreaming = true;
                 this.streamedText = '';
@@ -647,7 +648,10 @@
                                 if (data.type === 'session') {
                                     this.currentSessionId = data.id;
                                     this.addSessionToSidebar(data.id, text);
-                                    $wire.call('addUserMessage', data.id, text, data.attachments || []);
+                                    $wire.call('addUserMessage', data.id, text, data.attachments || []).then(() => {
+                                        this.pendingUserMessage = '';
+                                        this.pendingAttachments = [];
+                                    });
                                 } else if (data.type === 'text') {
                                     // First text after tools → collapse thinking
                                     if (!this.streamedText && this.thinkingSteps.length > 0) {

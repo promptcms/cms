@@ -8,6 +8,7 @@ use App\Models\MediaContainer;
 use App\Services\CssBuildService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Ai\Streaming\Events\TextDelta;
 use Laravel\Ai\Streaming\Events\ToolCall;
 use Laravel\Ai\Streaming\Events\ToolResult;
@@ -16,18 +17,28 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class AiChatStreamController extends Controller
 {
-    public function stream(Request $request): StreamedResponse
+    public function stream(Request $request): StreamedResponse|JsonResponse
     {
         set_time_limit(300);
 
-        $request->validate([
-            'prompt' => 'required_without_all:attachments,mentioned_media_ids|nullable|string|max:10000',
+        $validator = Validator::make($request->all(), [
+            'prompt' => 'required_without_all:attachments,mentioned_media_ids|nullable|string|max:100000',
             'session_id' => 'nullable|string',
             'attachments' => 'nullable|array|max:10',
             'attachments.*' => 'file|max:10240|mimes:jpg,jpeg,png,gif,webp,svg,bmp,ico',
             'mentioned_media_ids' => 'nullable|array|max:20',
             'mentioned_media_ids.*' => 'integer',
         ]);
+
+        if ($validator->fails()) {
+            $message = implode(' ', $validator->errors()->all());
+
+            return new StreamedResponse(function () use ($message) {
+                echo 'data: '.json_encode(['type' => 'error', 'message' => $message])."\n\n";
+                ob_flush();
+                flush();
+            }, 200, ['Content-Type' => 'text/event-stream']);
+        }
 
         $prompt = $request->input('prompt', '');
         $sessionId = $request->input('session_id');
