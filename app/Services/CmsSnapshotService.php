@@ -134,13 +134,18 @@ class CmsSnapshotService
                 $menuItem->save();
             }
 
-            // Restore settings
+            // Restore settings (skip ai group — those are installation-specific)
             foreach ($data['settings'] ?? [] as $setting) {
-                Setting::query()->create([
-                    'key' => $setting['key'],
-                    'value' => $setting['value'],
-                    'group' => $setting['group'] ?? 'general',
-                ]);
+                $group = $setting['group'] ?? 'general';
+
+                if ($group === 'ai') {
+                    continue;
+                }
+
+                Setting::query()->updateOrCreate(
+                    ['key' => $setting['key']],
+                    ['value' => $setting['value'], 'group' => $group],
+                );
             }
         });
     }
