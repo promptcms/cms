@@ -9,8 +9,8 @@
     $latest = $checker->getLatestRelease();
 @endphp
 
-<div class="bg-primary-600 text-white">
-    <div class="mx-auto flex max-w-7xl items-center justify-between gap-3 px-4 py-2 text-sm">
+<div class="shrink-0 bg-primary-600 text-white">
+    <div class="flex items-center justify-between gap-3 px-4 py-1.5 text-xs">
         <div class="flex items-center gap-2">
             <svg class="h-4 w-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
